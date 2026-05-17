@@ -1,0 +1,62 @@
+import customtkinter as ctk
+import requests
+import threading
+
+BOT_TOKEN = "8637896450:AAGsB7u2dEfM_k8yAl-mUqZhIbNMM_Zbx4A"
+CHANNELS = {
+    "ח'3": "@debiliili",
+    "ח'4": "@debiliili2",
+    "ח'5": "@debiliili3"
+}
+
+class TeacherApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("פאנל מורה")
+        self.geometry("450x350")
+        ctk.set_appearance_mode("dark")
+
+        self.label = ctk.CTkLabel(self, text="ניהול שיעור", font=("Arial", 22, "bold"))
+        self.label.pack(pady=20)
+
+        self.class_var = ctk.StringVar(value="בחר כיתה")
+        self.class_menu = ctk.CTkOptionMenu(self, values=list(CHANNELS.keys()), variable=self.class_var)
+        self.class_menu.pack(pady=10)
+
+        self.link_entry = ctk.CTkEntry(self, placeholder_text="הדבק קישור ל-Google Meet כאן", width=350, height=35)
+        self.link_entry.pack(pady=10)
+
+        self.btn_send = ctk.CTkButton(self, text="לכיתה קישור שלח", command=self.send_thread, fg_color="#1f538d", height=45)
+        self.btn_send.pack(pady=20)
+
+        self.status_label = ctk.CTkLabel(self, text="מוכן לעבודה", text_color="gray")
+        self.status_label.pack(side="bottom", pady=10)
+
+    def send_thread(self):
+        threading.Thread(target=self.send_logic, daemon=True).start()
+
+    def send_logic(self):
+        target_class = self.class_var.get()
+        link = self.link_entry.get().strip()
+
+        if target_class == "בחר כיתה" or "meet.google.com" not in link:
+            self.status_label.configure(text="שגיאה: בחר כיתה והכנס קישור תקין", text_color="red")
+            return
+
+        self.status_label.configure(text="שולח...", text_color="yellow")
+        chat_id = CHANNELS[target_class]
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        data = {"chat_id": chat_id, "text": f"השיעור מתחיל!\nקישור: {link}"}
+
+        try:
+            r = requests.post(url, data=data, timeout=10)
+            if r.status_code == 200:
+                self.status_label.configure(text="הקישור נשלח בהצלחה!", text_color="#2ecc71")
+            else:
+                self.status_label.configure(text=f"שגיאה: {r.status_code}", text_color="red")
+        except:
+            self.status_label.configure(text="שגיאת רשת", text_color="red")
+
+if __name__ == "__main__":
+    app = TeacherApp()
+    app.mainloop()
